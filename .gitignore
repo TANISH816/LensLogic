@@ -1,0 +1,11 @@
+# Java
+target
+.idea
+.class
+
+# React
+node_modules
+dist
+
+# System
+.DS_Store
