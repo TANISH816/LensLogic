@@ -61,7 +61,7 @@ function App() {
 
 // Simple CSS-in-JS for now so we don't have to jump between files
 const styles = {
-  container: { fontFamily: 'Inter, sans-serif', backgroundColor: '#f0f2f5', minHeight: '100vh', padding: '40px' },
+  container: { fontFamily: 'Inter, sans-serif', backgroundColor: '#f0f2f5', minHeight: '100vh', padding: '40px', minWidth:'100%'},
   header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px', justifyContent: 'center' },
   title: { fontSize: '32px', color: '#1a1a1a' },
   main: { display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' },

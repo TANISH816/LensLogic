@@ -2,10 +2,15 @@
 target
 .idea
 .class
+.venv
 
 # React
 node_modules
 dist
+
+# Python
+.venv
+__pycache__
 
 # System
 .DS_Store
