@@ -1,21 +1,54 @@
-import { useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useRef, useState } from 'react'
 
-export default function UploadZone({ onFiles, accept = { 'image/*': [] }, multiple = true, label }) {
-  const onDrop = useCallback(accepted => {
-    if (accepted.length) onFiles(accepted)
-  }, [onFiles])
+export default function UploadZone({ onFiles, multiple = true, label }) {
+  const inputRef = useRef()
+  const [isDragging, setIsDragging] = useState(false)
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept, multiple
-  })
+  function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'))
+    if (files.length) onFiles(files)
+  }
+
+  function onDragOver(e) {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  function onDragLeave(e) {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  function onDrop(e) {
+    e.preventDefault()
+    setIsDragging(false)
+    handleFiles(e.dataTransfer.files)
+  }
+
+  function onChange(e) {
+    handleFiles(e.target.files)
+    e.target.value = ''   // reset so same file can be re-selected
+  }
 
   return (
-    <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
-      <input {...getInputProps()} />
-      <span className="dropzone-icon">{isDragActive ? '📂' : '🖼️'}</span>
+    <div
+      className={`dropzone ${isDragging ? 'active' : ''}`}
+      onClick={() => inputRef.current.click()}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple={multiple}
+        style={{ display: 'none' }}
+        onChange={onChange}
+      />
+      <span className="dropzone-icon">{isDragging ? '📂' : '🖼️'}</span>
       <p className="dropzone-text">
-        {isDragActive
+        {isDragging
           ? <strong>Drop it!</strong>
           : <><strong>{label || 'Click or drag photos here'}</strong><br />Supports JPG, PNG, WEBP</>
         }
