@@ -3,10 +3,12 @@ target
 .idea
 .class
 .venv
+.vscode
 
 # React
 node_modules
 dist
+
 
 # Python
 .venv
@@ -14,3 +16,6 @@ __pycache__
 
 # System
 .DS_Store
+
+# folders
+lenslogic-backend/uploads/
