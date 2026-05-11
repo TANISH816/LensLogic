@@ -6,4 +6,6 @@ numpy
 python-dotenv
 psycopg2-binary
 sqlalchemy
-face_recognition
+opencv-python
+insightface
+onnxruntime
