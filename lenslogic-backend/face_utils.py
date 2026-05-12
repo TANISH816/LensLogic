@@ -71,7 +71,7 @@ def find_matches(
     selfie_encoding: list[float],
     stored: list[dict],
     threshold: float = 0.4
-) -> list[str]:
+) -> list[int]:
     """
     Vectorized cosine-similarity matching using NumPy.
     Handles 50,000 embeddings in ~0.1s.
@@ -85,11 +85,11 @@ def find_matches(
 
     Args:
         selfie_encoding : 512-float list from guest selfie
-        stored          : list of dicts with keys 'encoding' and 'photo_path'
+        stored          : list of dicts with keys 'encoding' and 'photo_id'
         threshold       : cosine similarity cutoff (0.0–1.0, higher = stricter)
 
     Returns:
-        List of unique photo_path strings where the guest's face was found.
+        List of unique photo_id integers where the guest's face was found.
     """
     if not stored:
         return []
@@ -106,13 +106,13 @@ def find_matches(
     similarities = all_encodings @ selfie_norm
 
     match_indices = np.where(similarities >= threshold)[0]
-    matched_paths = list({stored[i]["photo_path"] for i in match_indices})
+    matched_ids = list({stored[i]["photo_id"] for i in match_indices})
 
     logger.info(
-        f"Matched {len(matched_paths)} photo(s) from {len(stored)} encodings "
+        f"Matched {len(matched_ids)} photo(s) from {len(stored)} encodings "
         f"(threshold={threshold}, top_sim={similarities.max():.3f})"
     )
-    return matched_paths
+    return matched_ids
 
 
 def count_faces(image_bytes: bytes) -> int:

@@ -8,17 +8,19 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 
 from face_utils import encode_image, find_matches, get_model
-from storage import save_photo, UPLOAD_DIR
+from storage import save_photo
 from database import (
     init_db,
     create_group,
     group_exists,
     get_group_status,
     save_encodings,
-    get_encodings_for_group
+    get_encodings_for_group,
+    get_photo_db,
+    delete_group_with_photos
 )
 
 load_dotenv()
@@ -45,9 +47,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-
 
 # ── Startup ───────────────────────────────────────────────────────────────────
 
@@ -70,16 +69,16 @@ def generate_group_id() -> str:
 # ── Background task — runs in thread pool so it never blocks the event loop ───
 
 def process_one_photo(filename: str, image_bytes: bytes, group_id: str):
-    """Synchronous worker: save photo + encode faces + store to DB."""
+    """Synchronous worker: save photo to DB + encode faces + store encodings."""
     try:
-        photo_path = save_photo(image_bytes, group_id, filename)
-        if not photo_path:
+        photo_id = save_photo(image_bytes, group_id, filename)
+        if photo_id is None:
             logger.warning(f"[BG] Could not save {filename}, skipping.")
             return
 
         encodings = encode_image(image_bytes)
-        save_encodings(group_id, photo_path, encodings)
-        logger.info(f"[BG] {filename} → {len(encodings)} face(s) encoded.")
+        save_encodings(group_id, photo_id, encodings)
+        logger.info(f"[BG] {filename} (ID: {photo_id}) → {len(encodings)} face(s) encoded.")
 
     except Exception as e:
         logger.error(f"[BG] Error on {filename}: {e}")
@@ -103,6 +102,21 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/photo/{photo_id}")
+def get_photo(photo_id: int):
+    """Serve a photo from the database by its ID."""
+    result = get_photo_db(photo_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Photo not found.")
+    
+    file_data, mime_type = result
+    return StreamingResponse(
+        iter([file_data]),
+        media_type=mime_type,
+        headers={"Content-Disposition": f"inline; filename=photo_{photo_id}.jpg"}
+    )
 
 
 @app.post("/upload")
@@ -176,19 +190,19 @@ async def match_face(
             detail="No photos processed yet for this group. Please wait a moment and try again."
         )
 
-    matched_paths = find_matches(selfie_encoding, stored, threshold=MATCH_THRESHOLD)
+    matched_ids = find_matches(selfie_encoding, stored, threshold=MATCH_THRESHOLD)
 
-    base_url = "http://localhost:8000/uploads"
-    matched_urls = [f"{base_url}/{path}" for path in matched_paths]
+    matched_urls = [f"http://localhost:8000/photo/{photo_id}" for photo_id in matched_ids]
 
     return {
         "group_id": group_id,
-        "total_matched": len(matched_urls),
+        "total_matched": len(matched_ids),
         "total_searched": len(stored),
-        "matched_photos": matched_urls,
+        "matched_photo_ids": matched_ids,
+        "matched_photo_urls": matched_urls,
         "message": (
-            f"Found you in {len(matched_urls)} photo(s)! 🎉"
-            if matched_urls else
+            f"Found you in {len(matched_ids)} photo(s)! 🎉"
+            if matched_ids else
             "No matches found. Try a clearer selfie or check the Group ID."
         )
     }
