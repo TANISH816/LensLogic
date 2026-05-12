@@ -59,10 +59,7 @@ def delete_group_folder(group_id: str) -> bool:
     """
     Delete all photos for a group.
     Note: Use database.delete_group_with_photos() instead for full cleanup.
+    This function is deprecated and kept only for backward compatibility.
     """
-    logger.info(f"delete_group_folder called for {group_id} (use delete_group_with_photos from database module)")
-            logger.info(f"Deleted folder for group: {group_id}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to delete group folder: {e}")
-        return False
+    from database import delete_group_with_photos
+    return delete_group_with_photos(group_id)
